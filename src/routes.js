@@ -1,6 +1,24 @@
 const data=require('./mockdata')
-
+const jwt = require('jsonwebtoken');
 const Promotion = require('./models/promotionsModel')
+const usersModel = require('./models/usersModel')
+
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['auth-token']
+
+	// 'esto es mi token: dsjkhfsdjktrty65'
+  const token = authHeader && authHeader.split(' ')[1]
+
+  if (token == null) return res.sendStatus(401)
+
+  jwt.verify(token, 'BEA', ( err ) => {
+		console.log(err)
+
+		if (err) return res.sendStatus(403)
+
+		next()
+  })
+}
 
 module.exports = function(app){
 
@@ -12,7 +30,7 @@ module.exports = function(app){
 			res.send('Estoy en la luna')
 	})
 
-	app.get('/alldata', (req,res)=>{
+	app.get('/alldata', authenticateToken, (req,res)=>{
 			Promotion.find()
 				.then ( data=>{
 					res.send(data)
@@ -22,7 +40,7 @@ module.exports = function(app){
 				})
 	})
 
-	app.get('/promotion/:id', (req,res)=>{
+	app.get('/promotion/:id', authenticateToken, (req,res)=>{
 			const id=req.params.id
 			// const promotion=data.filter ((promo)=>{
 			// 		if (promo.id===id) return true
@@ -38,7 +56,7 @@ module.exports = function(app){
 				})
 	})
 
-	app.get('/search-promotion-bybrand/:brand', (req,res)=>{
+	app.get('/search-promotion-bybrand/:brand', authenticateToken, (req,res)=>{
 			const brand=req.params.brand
 			Promotion.find({ brand: /brand/i })
 				.then( data => {
@@ -82,11 +100,25 @@ module.exports = function(app){
 			const email=req.body.email
 			const password=req.body.password
 			console.log("Someone is trying to login",email, password)
-			res.send({
-					email:email,
-					password:password,
-					test:"Se envió"
+
+			usersModel.findOne({email:email})
+			.then(data=>{
+				if (data?.password===password && password!=undefined) {
+
+					const token = jwt.sign( data.email, 'BEA' )
+				
+					res
+						.header({ 'auth-token': token })
+						.status(200)
+						.send({data:token})
+				
+				}
+				else {res.status(403).send("¿Me estás intentando piratear?")}
 			})
+			.catch( error => {
+				res.status(403).send( error )
+			})
+
 	})
 }
 
