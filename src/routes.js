@@ -4,11 +4,8 @@ const Promotion = require('./models/promotionsModel')
 const usersModel = require('./models/usersModel')
 
 function authenticateToken(req, res, next) {
-  const authHeader = req.headers['auth-token']
-
-	// 'esto es mi token: dsjkhfsdjktrty65'
-  const token = authHeader && authHeader.split(' ')[1]
-
+  const token = req.headers['auth-token']
+  
   if (token == null) return res.sendStatus(401)
 
   jwt.verify(token, 'BEA', ( err ) => {
